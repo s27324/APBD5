@@ -26,6 +26,30 @@ var _animals = new List<Animal>()
     new Animal {Id = 4, Name = "Stefan", Category = Category.Parrot, Mass = 0.1, CoatColor = "yellow"}
 };
 
+var _visits = new List<Visit>()
+{
+    new Visit {VisitDate = new DateTime(2022, 6, 1), TreatedAnimalId = 1, VisitDescription = "zlamany pazur", VisitPrice = 100},
+    new Visit {VisitDate = new DateTime(2022, 6, 1), TreatedAnimalId = 2, VisitDescription = "odrobaczanie", VisitPrice = 150},
+    new Visit {VisitDate = new DateTime(2022, 6, 3), TreatedAnimalId = 1, VisitDescription = "kontrola", VisitPrice = 50},
+    new Visit {VisitDate = new DateTime(2022, 6, 4), TreatedAnimalId = 3, VisitDescription = "zabieg na lape", VisitPrice = 400}
+};
+
+Dictionary<Animal, List<Visit>> AnimalsAndVisits = new Dictionary<Animal, List<Visit>>();
+
+
+foreach (Animal animal in _animals)
+{
+    var tempVisits = new List<Visit>();
+    foreach (Visit visit in _visits)
+    {
+        if (animal.Id == visit.TreatedAnimalId)
+        {
+            tempVisits.Add(visit);
+        }    
+    }
+    AnimalsAndVisits.Add(animal, tempVisits);
+}
+
 app.MapGet("/api/animals", () => Results.Ok(_animals))
     .WithName("GetAnimals")
     .WithOpenApi();
@@ -38,12 +62,41 @@ app.MapGet("/api/animals/{id:int}", (int id) =>
     .WithName("GetAnimal")
     .WithOpenApi();
 
-app.MapPost("api/animals", (Animal animal) =>
+app.MapGet("/api/visits/{id:int}", (int id) =>
+    {
+        Animal animal = _animals.FirstOrDefault(a => a.Id == id);
+        return animal == null
+            ? Results.NotFound($"Animal with id {id} was not found")
+            : Results.Ok(AnimalsAndVisits[animal]);
+    })
+    .WithName("GetVisitOfGivenAnimal")
+    .WithOpenApi();
+
+app.MapPost("/api/animals", (Animal animal) =>
     {
         _animals.Add(animal);
         return Results.StatusCode(StatusCodes.Status201Created);
     })
     .WithName("CreateAnimal")
+    .WithOpenApi();
+
+app.MapPost("/api/visits", (Visit visit) =>
+    {
+        _visits.Add(visit);
+        Animal tempAnimal = _animals.FirstOrDefault(a => a.Id == visit.TreatedAnimalId);
+        if (tempAnimal == null)
+        {
+            return Results.NotFound($"Animal with id {visit.TreatedAnimalId} was not found");
+        }
+
+        var tempList = AnimalsAndVisits[tempAnimal];
+        
+        tempList.Add(visit);
+
+        AnimalsAndVisits[tempAnimal] = tempList;
+        return Results.StatusCode(StatusCodes.Status201Created);
+    })
+    .WithName("CreateVisit")
     .WithOpenApi();
 
 app.MapPut("/api/animals/{id:int}", (int id, Animal animal) =>
@@ -56,7 +109,7 @@ app.MapPut("/api/animals/{id:int}", (int id, Animal animal) =>
 
         _animals.Remove(animalToEdit);
         _animals.Add(animal);
-        return Results.NoContent();
+        return Results.StatusCode(StatusCodes.Status200OK);
     })
     .WithName("UpdateAnimal")
     .WithOpenApi();
@@ -66,18 +119,16 @@ app.MapDelete("/api/animals/{id:int}", (int id) =>
         Animal animalToDelete = _animals.FirstOrDefault(a => a.Id == id);
         if (animalToDelete == null)
         {
-            return Results.NoContent();
+            return Results.NotFound($"Animal with id {id} was not found");
         }
 
+        AnimalsAndVisits.Remove(animalToDelete);
+        _visits.RemoveAll(v => v.TreatedAnimalId==id);
+
         _animals.Remove(animalToDelete);
-        return Results.NoContent();
+        return Results.StatusCode(StatusCodes.Status200OK);
     })
     .WithName("DeleteAnimal")
     .WithOpenApi();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
