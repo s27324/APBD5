@@ -62,7 +62,7 @@ app.MapGet("/api/animals/{id:int}", (int id) =>
     .WithName("GetAnimal")
     .WithOpenApi();
 
-app.MapGet("/api/visits/{id:int}", (int id) =>
+app.MapGet("/api/animals/visits/{id:int}", (int id) =>
     {
         Animal animal = _animals.FirstOrDefault(a => a.Id == id);
         return animal == null
@@ -80,7 +80,7 @@ app.MapPost("/api/animals", (Animal animal) =>
     .WithName("CreateAnimal")
     .WithOpenApi();
 
-app.MapPost("/api/visits", (Visit visit) =>
+app.MapPost("/api/animals/visits", (Visit visit) =>
     {
         _visits.Add(visit);
         Animal tempAnimal = _animals.FirstOrDefault(a => a.Id == visit.TreatedAnimalId);
